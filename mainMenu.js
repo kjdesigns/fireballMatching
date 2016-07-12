@@ -40,7 +40,7 @@ fireballMatching.mainMenu = {
 					if(this.counter<= localStorage.getItem('bestLevel'))
 					{ 
 					but.inputEnabled = true;
-					//but.events.onInputDown.add(this.listener,this);
+					but.events.onInputDown.add(this.listener,this);
 					}else
 					{
 						but.inputEnabled = false;
@@ -56,5 +56,11 @@ fireballMatching.mainMenu = {
 				
 			}
 		
+    },
+    
+    listener:function(target){
+    	this.currentLevel=target.lev-1;
+    	console.log(this.currentLevel);
+    	this.game.state.start("game",true,false,this.currentLevel);
     }
 }

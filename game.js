@@ -8,12 +8,27 @@ fireballMatching.Game = {
                 {
                     buttons:[{x:100,y:300,key:"pig"},{x:300,y:300,key:"parrot"}],
                     questionText:{x:100,y:400,text:"Babui"},
-                    rightAnswer:"pig"
+                    rightAnswer:"pig",
+                    enemySpeed:400
                 },
                 {
                     buttons:[{x:200,y:400,key:"parrot"},{x:300,y:300,key:"pig"}],
                     questionText:{x:100,y:500,text:"Parrot"},
-                    rightAnswer:"parrot"
+                    rightAnswer:"parrot",
+                    enemySpeed:100
+                },
+                
+                {
+                    buttons:[{x:200,y:400,key:"parrot"},{x:300,y:300,key:"pig"},{x:400,y:300,key:"panda"}],
+                    questionText:{x:100,y:500,text:"PANDA"},
+                    rightAnswer:"panda",
+                    enemySpeed:200
+                },
+                {
+                    buttons:[{x:200,y:400,key:"panda"},{x:300,y:300,key:"parrot"},{x:400,y:300,key:"pig"}],
+                    questionText:{x:100,y:500,text:"PANDA"},
+                    rightAnswer:"panda",
+                    enemySpeed:200
                 }
             
             ];
@@ -25,7 +40,10 @@ fireballMatching.Game = {
   create:function(){
       //variables
       this.canGoNextLevel = false;
-      
+      this.levelData = this.map[this.currentLevel];
+      this.lives=3;
+      this.failedLevel = false;
+     
       
       this.game.stage.backgroundColor="#8296d1";
       this.player = this.game.add.sprite(100,100,"player");
@@ -41,32 +59,26 @@ fireballMatching.Game = {
       this.bullets.enableBody = true;
       this.bullets.createMultiple("3","square");
       
-      
-//       this.refresh = this.game.add.sprite(fullWidth-100, 10, "refresh");
-// 	  this.refresh.inputEnabled = true;
-// 	  this.refresh.events.onInputDown.add(this.listener,this);
+
       
       
       this.createEnemy();
       this.buildMap();
+     
   }, 
   
   update:function(){
     this.game.physics.arcade.overlap(this.bullets, this.enemies, this.collisionHandler, null, this);  
-    this.game.physics.arcade.overlap(this.player, this.bullets, this.collisionHandler, null, this);  
+    this.game.physics.arcade.overlap(this.player, this.bullets, this.killBulletAgainstPlayer, null, this); 
+    this.game.physics.arcade.overlap(this.player, this.enemies, this.playerAndEnemyCollide, null, this); 
     
-     if(this.enemy.alive==false){
-              console.log("enemy is dead")
-                 //this.canGoNextLevel = true;
-              //this.currentLevel++;
-              
-              //tween the correct display
-              this.showCorrectTween = this.game.add.tween(this.showCorrect).to({y:this.game.world.centerY},1000,"Linear",true);
-              this.showCorrectTween.onComplete.add(function(){
-                  this.goToNextLevel();
-              },this)
-              //this.game.time.events.add(Phaser.Timer.SECOND*4,this.goToNextLevel,this);
-          }
+    this.checkIfEnemyIsDead();
+    
+     
+       
+    
+    
+   
     
   },
   
@@ -81,7 +93,7 @@ fireballMatching.Game = {
           
       }
       
-         this.enemy.body.velocity.x = -100;
+         this.enemy.body.velocity.x = -this.levelData.enemySpeed;
 
         // Kill the enemy when out of the screen
         this.enemy.checkWorldBounds = true;
@@ -98,7 +110,25 @@ fireballMatching.Game = {
     bullet.kill();
     enemy.kill();
     
+  },
+  
+  killBulletAgainstPlayer:function(player,bullet){
+    if(this.lives>0){
+        bullet.kill();
+      
+    }
+    else{
+        bullet.kill();
+        player.kill();
+        this.disableAnimalButtons();
+        //SHOW A GAME OVER STATE
+        ///////////////////////////////+++++++++++++++++++++++++++++++++++++++++++++++++/////////////////////////
+       // this.checkIfEnemyIsDead();
+        //this.game.state.start("game",true,false,this.currentLevel);
+    }
     
+     this.lives--;
+     console.log(this.lives);
   },
   
   createBullet:function(x,y,direction){
@@ -117,7 +147,7 @@ fireballMatching.Game = {
   },
   
   buildMap:function(){
-      this.levelData = this.map[this.currentLevel];
+      
       this.animalButton = this.game.add.group();
       var button;
       this.levelData.buttons.forEach(function(element){
@@ -135,8 +165,15 @@ fireballMatching.Game = {
       
       this.text = this.game.add.text(this.levelData.questionText.x,this.levelData.questionText.y,this.levelData.questionText.text,{font:"21px Arial",fill:"#fff"});
       
-      this.showCorrect = this.game.add.text(this.game.world.centerX,this.game.world.height,"CORRECT",{font:"30px Arial",fill:"#fff",align:"center"});
+      this.showCorrect = this.game.add.text(this.game.world.centerX,this.game.world.centerY,"CORRECT",{font:"30px Arial",fill:"#fff",align:"center"});
+      this.showCorrect.scale.setTo(0);
       
+      this.showFail = this.game.add.text(this.game.world.centerX,this.game.world.centerY,"YOU DIED",{font:"30px Arial",fill:"#fff",align:"center"});
+      this.showFail.scale.setTo(0);
+      
+      this.playAnimalSound(this.levelData.questionText);
+      
+     
      
       
   },
@@ -144,27 +181,17 @@ fireballMatching.Game = {
   checkAnswer:function(sprite){
       if(sprite.key==this.levelData.rightAnswer){
           console.log("Match");
-          this.createBullet(this.player.x+30,this.player.y,300);
+          this.createBullet(this.player.x+50,this.player.y,this.levelData.enemySpeed+300);
+          //this.disableAnimalButtons();
          
       }else{
           console.log("no match");
-          this.createBullet(this.enemy.x-30,this.enemy.y+50,-300);
+          this.createBullet(this.enemy.x-30,this.enemy.y+50,-(this.levelData.enemySpeed+300));
+          
       }
       
-    //   //check if the enemy sprite is dead
-    //       if(this.enemy.alive == false){
-    //           this.canGoNextLevel = true;
-    //           this.currentLevel++;
-              
-    //           //tween the correct display
-    //           this.showCorrectTween = this.game.add.tween(this.showCorrect).to({y:this.game.world.centerY},1000,"Linear",true);
-    //           this.showCorrectTween.onComplete.add(function(){
-    //               this.goToNextLevel();
-    //           },this)
-    //       }
-    
-    
-    this.checkIfEnemyIsDead();
+ 
+ 
   },
   
   goToNextLevel:function(){
@@ -184,15 +211,99 @@ fireballMatching.Game = {
 				//console.log("New Level");
 				//this.goToNextLevel();
 			}
-      
+      console.log(this.currentLevel + "is the currentLevel from the goToNextLevel function");
       this.game.state.start("game",true,false,this.currentLevel);
   },
   
   checkIfEnemyIsDead:function(){
-      if(this.enemy.alive==false){
-          console.log("HEY MAN");
+      
+       
+       if(this.enemy.alive==false && !this.canGoNextLevel && this.player.alive){
+           this.canGoNextLevel=true;
+           //this.currentLevel++;
+           if(this.canGoNextLevel){
+               var tween = this.game.add.tween(this.showCorrect.scale).to({x:2,y:2},500,Phaser.Easing.Bounce.Out,true);
+                this.disableAnimalButtons();
+              tween.onComplete.add(function(){
+                  this.showCorrect.inputEnabled=true;
+                  this.showCorrect.events.onInputDown.add(function(){
+                      this.enableAnimalButtons();
+                     //this.game.state.start("game",true,false,this.currentLevel);  
+                     this.goToNextLevel();
+                  },this);
+              },this);
+               
+           }
+          
       }
+      else if(this.player.alive==false && !this.failedLevel){
+          //disable buttons because the player is dead and tween an animation
+          this.failedLevel = true;
+          this.disableAnimalButtons();
+              var failTween = this.game.add.tween(this.showFail.scale).to({x:3,y:3},500,Phaser.Easing.Bounce.Out,true);
+             
+              failTween.onComplete.add(function(){
+                  this.showFail.inputEnabled=true;
+                  this.showFail.events.onInputDown.add(function(){
+                      this.enableAnimalButtons();
+                      this.failedLevel=false;
+                      this.game.state.start("game",true,false,this.currentLevel);
+                  },this);
+              },this);
+               
+           
+      }
+      
+  },
+  
+  disableAnimalButtons:function(){
+      this.animalButton.forEach(function(element){
+          element.inputEnabled = false;
+      },this);
+  },
+  
+  enableAnimalButtons:function(){
+      this.animalButton.forEach(function(element){
+          element.inputEnabled = true;
+      },this);
+  },
+  
+  playAnimalSound:function(sprite){
+      console.log(sprite.text);
+  },
+  
+  playerAndEnemyCollide:function(player,enemy){
+      player.kill();
+      enemy.kill();
+      //probably play a cool enemy animation for the game over state
+      /////////++++++++++++++++++++++++++++++++++++++++////////////
+      this.checkIfEnemyIsDead();
+      //this.game.state.start("game",true,false,this.currentLevel);
+      
   }
+  
+  
     
     
 };
+
+
+
+
+
+
+
+
+
+
+   //   //check if the enemy sprite is dead
+    //       if(this.enemy.alive == false){
+    //           this.canGoNextLevel = true;
+    //           this.currentLevel++;
+              
+    //           //tween the correct display
+    //           this.showCorrectTween = this.game.add.tween(this.showCorrect).to({y:this.game.world.centerY},1000,"Linear",true);
+    //           this.showCorrectTween.onComplete.add(function(){
+    //               this.goToNextLevel();
+    //           },this)
+    //       }
